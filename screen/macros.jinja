@@ -1,0 +1,95 @@
+# -*- coding: utf-8 -*-
+# vim: ft=jinja
+
+{%- macro files_switch(prefix,
+                       files,
+                       default_files_switch=['id', 'os', 'os_family'],
+                       indent_width=6) %}
+  {#
+    Returns a valid value for the "source" parameter of a "file.managed"
+    state function. This makes easier the usage of the Template Override and
+    Files Switch (TOFS) pattern.
+
+    Params:
+      * prefix: pillar prefix to custom ':files_switch'. Colons ':'
+        are replaced by '/' to be used as directory prefix
+      * files: ordered list of files to look for, with full path
+      * default_files_switch: if there's no pillar 'prefix:files_switch'
+        this is the ordered list of grains to use as selector switch of the
+        directories under "prefix/files"
+      * indent_witdh: indentation of the result value to conform to YAML
+
+    Example:
+
+    If we have a state:
+
+      /etc/xxx/xxx.conf:
+        file:
+          - managed
+          - source: {{ files_switch('xxx', ['/etc/xxx/xxx.conf',
+                                            '/etc/xxx/xxx.conf.jinja']) }}
+          - template: jinja
+
+    In a minion with id=theminion and os_family=RedHat, it's going to be
+    rendered as:
+
+      /etc/xxx/xxx.conf:
+        file:
+          - managed
+          - source:
+            - salt://xxx/files/theminion/etc/xxx/xxx.conf
+            - salt://xxx/files/theminion/etc/xxx/xxx.conf.jinja
+            - salt://xxx/files/RedHat/etc/xxx/xxx.conf
+            - salt://xxx/files/RedHat/etc/xxx/xxx.conf.jinja
+            - salt://xxx/files/default/etc/xxx/xxx.conf
+            - salt://xxx/files/default/etc/xxx/xxx.conf.jinja
+  #}
+  {%- set path_prefix = prefix|replace(':', '/') %}
+  {%- set files_switch_list = salt['pillar.get'](prefix ~ ':files_switch',
+                                           default_files_switch) %}
+  {%- for grain in files_switch_list if grains.get(grain) is defined %}
+    {%- for file in files %}
+    {%- set url = '- salt://' ~ path_prefix ~ '/files/' ~
+                  grains.get(grain) ~ file %}
+{{ url | indent(indent_width, true) }}
+    {%- endfor %}
+  {%- endfor %}
+    {%- for file in files %}
+    {%- set url = '- salt://' ~ path_prefix ~ '/files/default' ~ file %}
+{{ url | indent(indent_width, true) }}
+    {%- endfor %}
+{%- endmacro %}
+
+{%- macro key_value_formatter(key, value) %}
+  {##
+    Returns a key:value pair with a space between. Lists will automatically
+    be rendered with the same key for each list item.
+
+    Params:
+      * key: The config keyword to render
+      * value: The data for the keyword
+
+    Example 1:
+      bind:
+        - ^k
+        - ^\
+
+      key_value_formatter('bind', ['^k', '^\']) would render as:
+        bind ^k
+        bind ^\
+
+    Example 2:
+      startup_message: on
+
+      key_value_formatter('startup_message', 'on') would render as:
+        startup_message on
+  ##}
+
+  {%- if value is iterable and value is not string %}
+    {%- for token in value %}
+{{ key }} {{ token }}
+    {%- endfor %}
+  {%- else %}
+{{ key }} {{ value }}
+  {%- endif %}
+{%- endmacro %}

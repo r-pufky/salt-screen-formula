@@ -1,0 +1,13 @@
+{%- from 'screen/macros.jinja' import key_value_formatter with context -%}
+{%- from 'screen/map.jinja' import screen with context -%}
+# Managed by saltstack.
+#
+# This is an example for the global screenrc file.
+# You may want to install this file as /usr/local/etc/screenrc.
+#
+# termcap and standard settings are done here.
+#
+
+{%- for key, value in screen.system|dictsort -%}
+{{ key_value_formatter(key, value) }}
+{%- endfor -%}

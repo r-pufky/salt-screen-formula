@@ -1,0 +1,27 @@
+# -*- coding: utf-8 -*-
+# vim: ft=jinja
+# Layering precendence: pillar > os > os_family > defaults
+
+{# import static formula defaults, and default overrides #}
+{% import_yaml 'screen/defaults.yaml' as defaults %}
+{% import_yaml 'screen/os_family_map.yaml' as os_family %}
+{% import_yaml 'screen/os_map.yaml' as os %}
+
+{# Get pillar specific default lookup overrides #}
+{% set screen_lookup = salt['pillar.get']('screen:lookup', {}).copy() %}
+
+{# Set OS specific settings; override with any lookup settings from pillar #}
+{% set screen = salt['grains.filter_by'](
+    defaults,
+    merge=salt['grains.filter_by'](
+      os_family,
+      grain='os_family',
+      merge=salt['grains.filter_by'](
+        os,
+        grain='os',
+        merge=screen_lookup,
+      ),
+    ),
+    base='screen',
+)
+%}

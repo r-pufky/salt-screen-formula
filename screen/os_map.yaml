@@ -1,0 +1,12 @@
+# -*- coding: utf-8 -*-
+# vim: ft=yaml
+# 'os' grain formula settings. May be overridden with pillar.
+# Layering precedence: pillar > os > os_family > defaults
+
+Ubuntu:
+  pkgs: screen
+  config: /etc/screenrc
+
+default:
+  pkgs: screen
+  config: /etc/screenrc
